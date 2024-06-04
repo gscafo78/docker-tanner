@@ -1,0 +1,98 @@
+version: '2.3'
+
+networks:
+  tanner_local:
+
+services:
+
+# Tanner Redis Service
+  tanner_redis:
+    build: ./redis
+    container_name: tanner_redis
+    restart: always
+    stop_signal: SIGKILL
+    tty: true
+#    cpu_count: 1
+#    cpus: 0.25
+    networks:
+     - tanner_local
+    image: "4ss078/redis"
+    read_only: true
+
+# PHP Sandbox service
+  tanner_phpox:
+    build: ./phpox
+    container_name: tanner_phpox
+    restart: always
+    stop_signal: SIGKILL
+    tmpfs:
+     - /tmp:uid=2000,gid=2000
+    tty: true
+#    cpu_count: 1
+#    cpus: 0.25
+    networks:
+     - tanner_local
+    image: "4ss078/phpox"
+    read_only: true
+
+# Tanner API Service
+  tanner_api:
+    build: ./tanner
+    container_name: tanner_api
+    restart: always
+    stop_signal: SIGKILL
+    tmpfs:
+     - /tmp/tanner:uid=2000,gid=2000
+    tty: true
+#    cpu_count: 1
+#    cpus: 0.25
+    networks:
+     - tanner_local
+    image: "4ss078/tanner"
+    read_only: true
+    volumes:
+     - /data/tanner/log:/var/log/tanner
+    command: tannerapi 
+    depends_on:
+     - tanner_redis
+
+# Tanner Service
+  tanner:
+    build: ./tanner
+    container_name: tanner
+    restart: always
+    stop_signal: SIGKILL
+    tmpfs:
+     - /tmp/tanner:uid=2000,gid=2000
+    tty: true
+#    cpu_count: 1
+#    cpus: 0.25
+    networks:
+     - tanner_local
+    image: "4ss078/tanner"
+    command: tanner
+    read_only: true
+    volumes:
+     - /data/tanner/log:/var/log/tanner
+     - /data/tanner/files:/opt/tanner/files
+    depends_on:
+     - tanner_api
+#     - tanner_web
+     - tanner_phpox
+
+# Snare Service
+  snare:
+    build: ./snare
+    container_name: snare
+    restart: always
+    stop_signal: SIGKILL
+    tty: true
+#    cpu_count: 1
+#    cpus: 0.25
+    networks:
+     - tanner_local
+    ports:
+     - "80:80"
+    image: "4ss078/snare"
+    depends_on:
+     - tanner
